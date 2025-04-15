@@ -649,6 +649,40 @@ public class RangeSlider : TemplatedView
 
         if (Interlocked.Decrement(ref dragCount) == 0)
             RaiseEvent(DragCompleted);
+
+#if WINDOWS
+        // On Windows, we need to remove and reinsert the view
+        // to reset the pan gesture recognizer for touch input
+        // Cf.: https://github.com/dotnet/maui/issues/15576
+        Dispatcher.Dispatch(() =>
+        {
+            RemoveAndReinsertView(view);
+        });
+#endif
+
+    }
+
+    void RemoveAndReinsertView(View targetView)
+    {
+        // Get parent layout
+        if (targetView.Parent is Microsoft.Maui.Controls.Layout parentLayout)
+        {
+            // Save index where the view currently is
+            int index = parentLayout.Children.IndexOf(targetView);
+
+            // Remove the view
+            parentLayout.Children.Remove(targetView);
+
+            // Reinsert the view at the original index (if still valid)
+            if (index >= 0 && index <= parentLayout.Children.Count)
+            {
+                parentLayout.Children.Insert(index, targetView);
+            }
+            else
+            {
+                parentLayout.Children.Add(targetView); // Fallback
+            }
+        }
     }
 
     void UpdateValue(View view, double value)
